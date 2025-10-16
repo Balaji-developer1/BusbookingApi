@@ -43,13 +43,25 @@ namespace BusBookingProjectApi.Controllers
             return BadRequest(new { error = "Invalid or expired OTP" });
         }
 
-        // 🔹 Login → returns JWT token
+        // 🔹 Login → returns JWT token + Role
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest model)
         {
-            var token = await _authService.LoginAsync(model.Email, model.Password);
-            if (token == null) return Unauthorized(new { error = "Invalid credentials or account not verified" });
-            return Ok(new { token });
+            var user = await _authService.ValidateUserAsync(model.Email, model.Password);
+            if (user == null)
+                return Unauthorized(new { error = "Invalid credentials or account not verified" });
+
+            // 🔹 Generate JWT token
+            
+            var token = _authService.GenerateJwtToken(user);
+
+
+            return Ok(new
+            {
+                token,
+                role = user.Role,       // Admin/User check
+                email = user.Email
+            });
         }
 
         // 🔹 Resend OTP
@@ -59,7 +71,7 @@ namespace BusBookingProjectApi.Controllers
             var user = await _userRepo.GetByEmailAsync(model.Email);
             if (user == null) return BadRequest(new { error = "User not found" });
 
-            var otp = await _authService.GenerateOtpForUserAsync(user: user);
+            var otp = await _authService.GenerateOtpForUserAsync(user);
             return Ok(new { message = "OTP resent to email" });
         }
     }

@@ -3,6 +3,7 @@ using BusBookingProjectApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace BusBookingProjectApi.Repositories
@@ -16,6 +17,12 @@ namespace BusBookingProjectApi.Repositories
             _context = context;
         }
 
+        public async Task AddBookingAsync(Booking booking)
+        {
+            await _context.Bookings.AddAsync(booking);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<Booking?> GetByIdAsync(int id)
         {
             return await _context.Bookings
@@ -27,63 +34,76 @@ namespace BusBookingProjectApi.Repositories
         public async Task<List<Booking>> GetBookingsByUserIdAsync(int userId)
         {
             return await _context.Bookings
-                .Include(b => b.Bus)
                 .Where(b => b.UserId == userId)
+                .Include(b => b.Bus)
                 .ToListAsync();
         }
 
-        public async Task AddBookingAsync(Booking booking)
+        public async Task<List<Booking>> GetAllAsync()
         {
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
+            return await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Bus)
+                .ToListAsync();
         }
 
-        public async Task UpdateBookingAsync(Booking booking)
+        // 🔹 Updated BookSeatAsync
+        public async Task<string> BookSeatAsync(int userId, int busId, List<int> seatNumbers, decimal totalAmount, bool isAdmin = false)
         {
-            _context.Bookings.Update(booking);
-            await _context.SaveChangesAsync();
-        }
+            // All bookings for this bus
+            var allBookings = await _context.Bookings
+                .Where(b => b.BusId == busId)
+                .ToListAsync();
 
-        // 🔹 New: Seat-level booking
-        public async Task<string> BookSeatAsync(int userId, int busId, int seatNumber)
-        {
-            // 1️⃣ Check bus exists
-            var bus = await _context.Buses.FindAsync(busId);
-            if (bus == null) return "Bus not found";
+            // Already booked seats
+            var alreadyBooked = allBookings
+                .SelectMany(b => b.SeatNumbers ?? new List<int>())
+                .Intersect(seatNumbers)
+                .ToList();
 
-            // 2️⃣ Check seat exists
-            var seat = await _context.BusSeats
-                .FirstOrDefaultAsync(s => s.BusId == busId && s.SeatNumber == seatNumber);
-            if (seat == null) return "Seat not found";
+            if (alreadyBooked.Any() && !isAdmin)
+                return $"Seats already booked: {string.Join(",", alreadyBooked)}";
 
-            // 3️⃣ Check if already booked
-            if (seat.IsBooked) return "Seat already booked";
-
-            // 4️⃣ Mark seat as booked
-            seat.IsBooked = true;
-            seat.BookedByUserId = userId;
-            _context.BusSeats.Update(seat);
-
-            // 5️⃣ Create booking record
-            var booking = new Booking
+            if (isAdmin)
             {
-                BusId = busId,
-                UserId = userId,
-                Seats = 1,
-                TotalAmount = bus.Fare
-            };
-            _context.Bookings.Add(booking);
+                foreach (var booking in allBookings)
+                {
+                    booking.SeatNumbers = booking.SeatNumbers.Except(seatNumbers).ToList();
+                    booking.Seats = booking.SeatNumbers.Count;
+                }
+            }
 
+            var bookingEntry = new Booking
+            {
+                UserId = userId,
+                BusId = busId,
+                Seats = seatNumbers.Count,
+                SeatNumbers = seatNumbers,
+                TotalAmount = totalAmount
+            };
+
+            await _context.Bookings.AddAsync(bookingEntry);
             await _context.SaveChangesAsync();
+
             return "Seat booked successfully";
         }
 
-        // 🔹 New: Get all seats for a bus
-        public async Task<List<BusSeat>> GetSeatsByBusIdAsync(int busId)
+        // 🔹 Get booked seats by bus
+        public async Task<List<int>> GetBookedSeatsByBusIdAsync(int busId)
         {
-            return await _context.BusSeats
-                .Where(s => s.BusId == busId)
+            var allBookings = await _context.Bookings
+                .Where(b => b.BusId == busId)
                 .ToListAsync();
+
+            return allBookings
+                .SelectMany(b => b.SeatNumbers ?? new List<int>())
+                .ToList();
+        }
+
+        public async Task DeleteBookingAsync(Booking booking)
+        {
+            _context.Bookings.Remove(booking);
+            await _context.SaveChangesAsync();
         }
     }
 }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BusBookingProjectApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251010080330_addbusseats")]
-    partial class addbusseats
+    [Migration("20251016172934_Compeleted_project")]
+    partial class Compeleted_project
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -42,14 +42,15 @@ namespace BusBookingProjectApi.Migrations
                     b.Property<string>("PaymentTransactionId")
                         .HasColumnType("nvarchar(max)");
 
-                    b.PrimitiveCollection<string>("SeatNumbers")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("SeatNumbersString")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("SeatNumbers");
 
                     b.Property<int>("Seats")
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");

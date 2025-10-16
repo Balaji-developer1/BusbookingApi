@@ -3,7 +3,7 @@
   "info": {
     "title": "BusBooking API",
     "description": "API for managing bus booking system (with JWT Authentication)",
-    "version": "v1"
+    "version": "2.0"
   },
   "paths": {
     "/api/Auth/register": {
@@ -184,7 +184,7 @@
         }
       }
     },
-    "/api/Booking/user/{userId}": {
+    "/api/Booking/user/{userId}/bookings": {
       "get": {
         "tags": [
           "Booking"
@@ -192,41 +192,6 @@
         "parameters": [
           {
             "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Booking/all": {
-      "get": {
-        "tags": [
-          "Booking"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Booking/cancel/{id}": {
-      "delete": {
-        "tags": [
-          "Booking"
-        ],
-        "parameters": [
-          {
-            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
@@ -579,9 +544,6 @@
               "format": "int32"
             },
             "nullable": true
-          },
-          "isAdmin": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false

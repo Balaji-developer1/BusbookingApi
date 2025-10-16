@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 
 namespace BusBookingProjectApi.Models
 {
@@ -9,33 +11,62 @@ namespace BusBookingProjectApi.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "User ID is required")]
+        [Required]
         public int UserId { get; set; }
 
-        [Required(ErrorMessage = "Bus ID is required")]
+        [Required]
         public int BusId { get; set; }
 
-        [Required(ErrorMessage = "Seats count is required")]
-        [Range(1, 20, ErrorMessage = "Seats must be 1–20")]
+        [Required]
+        [Range(1, 20)]
         public int Seats { get; set; }
 
-        [Required(ErrorMessage = "Total amount is required")]
+        [Required]
+        [Column(TypeName = "decimal(10,2)")]
         public decimal TotalAmount { get; set; }
 
         public string? PaymentTransactionId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [ForeignKey("UserId")]
+        [ForeignKey(nameof(UserId))]
         public User? User { get; set; }
 
-        [ForeignKey("BusId")]
+        [ForeignKey(nameof(BusId))]
         public Bus? Bus { get; set; }
 
+        [Column("SeatNumbers")]
+        public string? SeatNumbersString { get; set; }
 
-
-        public List<int>? SeatNumbers { get; set; } // store seat numbers booked in this record
-        
-
+        [NotMapped]
+        public List<int> SeatNumbers
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(SeatNumbersString))
+                    return new List<int>();
+                var list = new List<int>();
+                foreach (var token in SeatNumbersString.Split(','))
+                {
+                    if (int.TryParse(token.Trim(), out var n))
+                    {
+                        if (!list.Contains(n))
+                            list.Add(n);
+                    }
+                }
+                return list;
+            }
+            set
+            {
+                if (value == null || !value.Any())
+                {
+                    SeatNumbersString = null;
+                }
+                else
+                {
+                    SeatNumbersString = string.Join(",", value.Distinct().ToList());
+                }
+            }
+        }
     }
 }

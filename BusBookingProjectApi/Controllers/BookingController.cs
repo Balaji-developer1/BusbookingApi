@@ -1,91 +1,110 @@
 ﻿using BusBookingProjectApi.Models;
 using BusBookingProjectApi.Repositories;
-using BusBookingProjectApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace BusBookingProjectApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // Auth required
     public class BookingController : ControllerBase
     {
         private readonly IBookingRepository _bookingRepo;
-        private readonly IBusRepository _busRepo;
-        private readonly IPaymentRepository _paymentRepo;
-        private readonly IFakePaymentService _paymentService;
 
-        public BookingController(
-            IBookingRepository bookingRepo,
-            IBusRepository busRepo,
-            IPaymentRepository paymentRepo,
-            IFakePaymentService paymentService)
+        public BookingController(IBookingRepository bookingRepo)
         {
             _bookingRepo = bookingRepo;
-            _busRepo = busRepo;
-            _paymentRepo = paymentRepo;
-            _paymentService = paymentService;
         }
 
-        // 🔹 Book a specific seat
+        // 🔹 Book seats (User/Admin)
         [HttpPost("book-seat")]
         public async Task<IActionResult> BookSeat([FromBody] SeatBookingRequest model)
         {
-            var bus = await _busRepo.GetByIdAsync(model.BusId);
-            if (bus == null) return NotFound(new { error = "Bus not found" });
+            if (model.SeatNumbers == null || !model.SeatNumbers.Any())
+                return BadRequest(new { error = "Seat numbers are required" });
 
-            // Check seat availability
-            var result = await _bookingRepo.BookSeatAsync(model.UserId, model.BusId, model.SeatNumber);
-            if (result != "Seat booked successfully")
+            var bookedSeats = await _bookingRepo.GetBookedSeatsByBusIdAsync(model.BusId);
+
+            if (!model.IsAdmin)
+            {
+                var conflictSeats = model.SeatNumbers.Intersect(bookedSeats).ToList();
+                if (conflictSeats.Any())
+                    return BadRequest(new { error = $"Seats already booked: {string.Join(",", conflictSeats)}" });
+            }
+
+            decimal totalAmount = model.SeatNumbers.Count * 100;
+            var result = await _bookingRepo.BookSeatAsync(model.UserId, model.BusId, model.SeatNumbers, totalAmount, model.IsAdmin);
+
+            if (!result.Contains("successfully"))
                 return BadRequest(new { error = result });
 
-            // Get updated bus info
-            bus = await _busRepo.GetByIdAsync(model.BusId);
-
-            // Create payment for this seat
-            var payment = new Payment
-            {
-                BookingId = bus.Id,
-                Amount = bus.Fare,
-                Status = "Pending"
-            };
-
-            payment = await _paymentService.ProcessPaymentAsync(payment);
-            await _paymentRepo.AddPaymentAsync(payment);
-
-            return Ok(new
-            {
-                message = "Seat booked successfully",
-                busId = bus.Id,
-                seatNumber = model.SeatNumber,
-                paymentId = payment.Id,
-                status = payment.Status
-            });
+            return Ok(new { message = result });
         }
 
-        // 🔹 Get all seats for a bus (red/green status)
-        [HttpGet("bus/{busId}/seats")]
-        public async Task<IActionResult> GetSeats(int busId)
+        // 🔹 Get booked seats for a specific bus
+        [HttpGet("bus/{busId}/booked-seats")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetBookedSeats(int busId)
         {
-            var seats = await _bookingRepo.GetSeatsByBusIdAsync(busId);
-            return Ok(seats);
+            var bookedSeats = await _bookingRepo.GetBookedSeatsByBusIdAsync(busId);
+            return Ok(bookedSeats);
         }
 
-        // 🔹 Get bookings by user
+        // 🔹 Get bookings for a user
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetBookings(int userId)
+        public async Task<IActionResult> GetBookingsByUser(int userId)
         {
             var bookings = await _bookingRepo.GetBookingsByUserIdAsync(userId);
+            if (!bookings.Any())
+                return NotFound(new { message = "No bookings found for this user" });
             return Ok(bookings);
+        }
+
+        // 🔹 Admin - Get all bookings
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllBookings()
+        {
+            var bookings = await _bookingRepo.GetAllAsync();
+            return Ok(bookings);
+        }
+
+        // 🔹 Cancel booking (Admin/User)
+        [HttpDelete("cancel/{id}")]
+        public async Task<IActionResult> CancelBooking(int id)
+        {
+            var booking = await _bookingRepo.GetByIdAsync(id);
+            if (booking == null)
+                return NotFound(new { error = "Booking not found" });
+
+            // Get current user info
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
+            var roleClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+            if (roleClaim != "Admin")
+            {
+                if (userIdClaim == null || int.Parse(userIdClaim) != booking.UserId)
+                {
+                    return Forbid("You can only cancel your own bookings");
+                }
+            }
+
+            await _bookingRepo.DeleteBookingAsync(booking);
+            return Ok(new { message = "Booking cancelled successfully" });
         }
     }
 
-    // 🔹 Request DTOs
+    // 🔹 DTO for booking request
     public class SeatBookingRequest
     {
         public int UserId { get; set; }
         public int BusId { get; set; }
-        public int SeatNumber { get; set; }  // seat user wants to book
+        public List<int> SeatNumbers { get; set; } = new();
+        public bool IsAdmin { get; set; } = false;
     }
 }

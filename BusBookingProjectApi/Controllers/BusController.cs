@@ -2,13 +2,15 @@
 using BusBookingProjectApi.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace BusBookingProjectApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // 🔹 Token இல்லாவிட்டால் எல்லாம் block
+    [Authorize] // Auth required for all actions except AllowAnonymous
     public class BusController : ControllerBase
     {
         private readonly IBusRepository _busRepo;
@@ -20,7 +22,7 @@ namespace BusBookingProjectApi.Controllers
 
         // 🔹 Admin - Add Bus
         [HttpPost("add")]
-        [Authorize(Roles = "Admin")] // 🔹 Only Admin
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddBus([FromBody] Bus bus)
         {
             if (bus == null)
@@ -64,16 +66,16 @@ namespace BusBookingProjectApi.Controllers
             return Ok(new { message = "Bus deleted successfully" });
         }
 
-        // 🔹 User - Get All Buses
+        // 🔹 Get all buses (public)
         [HttpGet("all")]
-        [AllowAnonymous] // 🔹 Everyone can see bus list
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllBuses()
         {
             var buses = await _busRepo.GetAllBusesAsync();
             return Ok(buses);
         }
 
-        // 🔹 Get Bus by ID
+        // 🔹 Get bus by Id (public)
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBusById(int id)

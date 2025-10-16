@@ -19,7 +19,7 @@ namespace BusBookingProjectApi.Services
         // Hash OTP with salt
         public static string HashOtp(string otp, string salt)
         {
-            using var sha256 = SHA256.Create();
+            using var sha256 = SHA256.Create();//hash algoritham ( password convert to hashvalues)
             var bytes = Encoding.UTF8.GetBytes(otp + salt);
             var hash = sha256.ComputeHash(bytes);
             return Convert.ToBase64String(hash);

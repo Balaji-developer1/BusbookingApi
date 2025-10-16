@@ -13,7 +13,7 @@ namespace BusBookingProjectApi.Models
         public int BookingId { get; set; }
 
         [Required(ErrorMessage = "Amount is required")]
-        [Range(1, 100000, ErrorMessage = "Amount must be greater than 0")]
+        [Range(1, 1000, ErrorMessage = "Amount must be greater than 0")]
         public decimal Amount { get; set; }
 
         [Required(ErrorMessage = "Payment status is required")]

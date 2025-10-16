@@ -7,7 +7,7 @@ namespace BusBookingProjectApi.Services
 {
     public class SmtpEmailService : IEmailService
     {
-        private readonly IConfiguration _config;
+        private readonly IConfiguration _config;//acces the app.setting json file like a database
         public SmtpEmailService(IConfiguration config)
         {
             _config = config;

@@ -5,20 +5,25 @@ using BusBookingProjectApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Text;
+using Microsoft.OpenApi.Models;//swagger testing 
+using System.Runtime.InteropServices;//c++
+using System.Text; //string--> byte matha utf 8 
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args); //access the file 
 
 // 🔹 Add DbContext with SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔹 Register Repositories
+// 🔹 Register Repositories //depandancy injection 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBusRepository, BusRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+//builder.Services.AddSingleton<Classname>
+
+
 
 // 🔹 Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -26,7 +31,7 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IFakePaymentService, FakePaymentService>();
 
 // 🔹 Add Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers(); //all controller wors prperly, services 
 
 // 🔹 Swagger + JWT support
 builder.Services.AddEndpointsApiExplorer();

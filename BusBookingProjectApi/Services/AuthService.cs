@@ -23,14 +23,13 @@ namespace BusBookingProjectApi.Services
             _configuration = configuration;
         }
 
-        // 🔹 Register + Send OTP to Email
+        // 🔹 Register + Send OTP
         public async Task<User> RegisterAsync(string username, string email, string password, string role)
         {
             var existing = await _userRepo.GetByEmailAsync(email);
             if (existing != null)
                 throw new Exception("Email already registered");
 
-            // Hash password with salt
             var salt = OtpHelper.GenerateSalt();
             var passwordHash = OtpHelper.HashPassword(password, salt);
 
@@ -43,10 +42,8 @@ namespace BusBookingProjectApi.Services
                 Role = role
             };
 
-            // Save user in DB
             await _userRepo.AddUserAsync(user);
 
-            // Generate OTP & send mail
             var otp = OtpHelper.GenerateOtp();
             await _emailService.SendEmailAsync(email, "Your OTP", $"Your OTP is {otp}");
 
@@ -78,15 +75,24 @@ namespace BusBookingProjectApi.Services
         // 🔹 Login → Return JWT token
         public async Task<string?> LoginAsync(string email, string password)
         {
-            var user = await _userRepo.GetByEmailAsync(email);
-            if (user == null || !user.IsVerified)
-                return null;
-
-            var hash = OtpHelper.HashPassword(password, user.Salt);
-            if (hash != user.PasswordHash)
-                return null;
+            var user = await ValidateUserAsync(email, password);
+            if (user == null) return null;
 
             return GenerateJwtToken(user);
+        }
+
+        // 🔹 Validate User for Login
+        public async Task<User?> ValidateUserAsync(string email, string password)
+        {
+            var user = await _userRepo.GetByEmailAsync(email);
+            if (user == null) return null;
+
+            var hash = OtpHelper.HashPassword(password, user.Salt);
+            if (hash != user.PasswordHash) return null;
+
+            if (!user.IsVerified) return null;
+
+            return user;
         }
 
         // 🔹 Generate JWT Token
@@ -99,7 +105,6 @@ namespace BusBookingProjectApi.Services
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
                 new Claim("userId", user.Id.ToString()),
-                // ✅ Use standard ClaimTypes.Role so [Authorize(Roles="Admin")] works
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
@@ -114,7 +119,7 @@ namespace BusBookingProjectApi.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        // 🔹 Resend OTP (Optional)
+        // 🔹 Resend OTP
         public async Task<string> GenerateOtpForUserAsync(User user)
         {
             var otp = OtpHelper.GenerateOtp();
@@ -125,6 +130,11 @@ namespace BusBookingProjectApi.Services
             await _userRepo.UpdateUserAsync(user);
 
             return otp;
+        }
+
+        string IAuthService.GenerateJwtToken(User user)
+        {
+            return GenerateJwtToken(user);
         }
     }
 }

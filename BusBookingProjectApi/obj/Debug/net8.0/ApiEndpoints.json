@@ -65,6 +65,16 @@
   },
   {
     "ContainingType": "BusBookingProjectApi.Controllers.BookingController",
+    "Method": "GetAllBookings",
+    "RelativePath": "api/Booking/all",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BusBookingProjectApi.Controllers.BookingController",
     "Method": "BookSeat",
     "RelativePath": "api/Booking/book-seat",
     "HttpMethod": "POST",
@@ -81,8 +91,8 @@
   },
   {
     "ContainingType": "BusBookingProjectApi.Controllers.BookingController",
-    "Method": "GetSeats",
-    "RelativePath": "api/Booking/bus/{busId}/seats",
+    "Method": "GetBookedSeats",
+    "RelativePath": "api/Booking/bus/{busId}/booked-seats",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -97,7 +107,23 @@
   },
   {
     "ContainingType": "BusBookingProjectApi.Controllers.BookingController",
-    "Method": "GetBookings",
+    "Method": "CancelBooking",
+    "RelativePath": "api/Booking/cancel/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "BusBookingProjectApi.Controllers.BookingController",
+    "Method": "GetBookingsByUser",
     "RelativePath": "api/Booking/user/{userId}",
     "HttpMethod": "GET",
     "IsController": true,

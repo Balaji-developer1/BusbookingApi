@@ -9,5 +9,7 @@ namespace BusBookingProjectApi.Services
         Task<bool> VerifyOtpAsync(string email, string otp);
         Task<string?> LoginAsync(string email, string password);
         Task<string> GenerateOtpForUserAsync(User user);
+        Task<User?> ValidateUserAsync(string email, string password);
+        string GenerateJwtToken(User user); // ✅ return string token
     }
 }

@@ -12,11 +12,11 @@ namespace BusBookingProjectApi.Models
         public int BusId { get; set; }
 
         [Required]
-        public int SeatNumber { get; set; }  // Seat number (1, 2, 3...)
+        public int SeatNumber { get; set; }
 
         public bool IsBooked { get; set; } = false;
 
-        public int? BookedByUserId { get; set; }  // User who booked the seat
+        public int? BookedByUserId { get; set; }
 
         [ForeignKey("BusId")]
         public Bus? Bus { get; set; }
